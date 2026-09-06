@@ -1,0 +1,16 @@
+{
+  "pipeline": "airplane_crashes_etl",
+  "total_rows": 4967,
+  "valid_rows": 4963,
+  "rejected_rows": 4,
+  "is_duplicate": 0,
+  "invalid_date": 0,
+  "missing_operator": 10,
+  "missing_location": 4,
+  "missing_aboard": 18,
+  "negative_fatalities": 0,
+  "invalid_year": 0,
+  "fatalities_gt_aboard": 0,
+  "severity": "LOW",
+  "human_review_required": false
+}

@@ -1,5 +1,0 @@
-order_id,date,product,qty,price,channel,category,revenue,temperature_c,rain_mm,condition
-O-1001,2026-08-28,Coffee,10.0,60.0,Store,Beverage,600.0,32,0,sunny
-O-1002,2026-08-28,Cake,5.0,80.0,Online,Bakery,400.0,32,0,sunny
-O-1009,2026-08-30,Tea,8.0,45.0,Online,Beverage,360.0,35,5,hot
-O-1011,2026-08-31,Coffee,6.0,60.0,Online,Beverage,360.0,31,18,cloudy

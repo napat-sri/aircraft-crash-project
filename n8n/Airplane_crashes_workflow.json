@@ -1,0 +1,226 @@
+{
+  "name": "Airplane crashes workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=วิเคราะห์ quality report ต่อไปนี้ แล้วตอบตาม schema ที่กำหนด:\n\n{{ JSON.stringify($json.body) }}",
+        "options": {
+          "systemMessage": "คุณคือ Data Quality Analyst Agent ของ ETL pipeline ข้อมูลอุบัติเหตุการบิน (airplane crashes)\nหน้าที่ของคุณคือรับ \"quality report\" (JSON) ที่ได้จากการตรวจสอบข้อมูลในแต่ละรอบ ETL\nแล้ววิเคราะห์ ตัดสินใจ และสรุปผลให้ทีมข้อมูลเข้าใจง่าย\n\nความหมายของแต่ละฟิลด์ใน report:\n- total_rows: จำนวนแถวข้อมูลดิบทั้งหมด\n- valid_rows / rejected_rows: แถวที่ผ่าน / ถูกคัดออก (Date หรือ Location หาย)\n- is_duplicate: จำนวนแถวซ้ำ\n- invalid_date: จำนวนแถวที่วันที่ไม่ถูกต้อง\n- missing_operator / missing_location / missing_aboard: จำนวนแถวที่ค่าสำคัญหายไป\n- negative_fatalities: จำนวนผู้เสียชีวิตติดลบ (เป็นไปไม่ได้ = ข้อมูลผิด)\n- invalid_year: ปีอยู่นอกช่วงสมเหตุสมผล (1908 ถึงปัจจุบัน)\n- fatalities_gt_aboard: จำนวนแถวที่ผู้เสียชีวิตมากกว่าผู้โดยสาร (ผิด logic ร้ายแรง)\n- severity: ระดับความรุนแรงเบื้องต้น (LOW/MEDIUM/HIGH)\n- human_review_required: ระบบตั้งค่าว่าควรให้คนตรวจหรือไม่\n\nเกณฑ์การตัดสินใจ (decision):\n- ตอบ \"ALERT\" เมื่อ: severity เป็น HIGH, หรือ human_review_required เป็น true,\n  หรือมี logic error (fatalities_gt_aboard > 0 หรือ negative_fatalities > 0),\n  หรือ rejected_rows เกิน 10% ของ total_rows\n- ตอบ \"OK\" เมื่อ: ข้อมูลอยู่ในเกณฑ์ปกติ ไม่เข้าเงื่อนไขข้างต้น\n\nแนวทางการตอบ:\n- ใช้ภาษาทางการแต่เป็นมิตร\n- เน้นจุดสังเกตที่สำคัญ เช่น ข้อมูลมีความผิดปกติ, จำนวนข้อมูลซ้ำ, หรือประเด็นที่ต้องตรวจสอบเพิ่มเติม\n- จัดหน้าด้วย HTML หัวข้อให้ชัดเจน\n- ห้ามใช้เครื่องหมาย Markdown เช่น ** (ตัวหนา) หรือ * (รายการ) เด็ดขาด"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "0033199d-f130-46bb-82d7-d0d1bb47f599",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $now }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        240,
+        256
+      ],
+      "id": "99dc3523-e847-44dd-bdcc-0635ed969e2a",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-flash-lite-latest",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "66d3119e-00da-4ae6-b760-a40d019eddf3",
+      "cid": "Ikx1Y2FzIFBleXJpbiI",
+      "name": "Connect Gemini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "creator": "Lucas Peyrin",
+      "position": [
+        0,
+        256
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "9Vcu2hQyOpwPPK58",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "notes": "© 2025 Lucas Peyrin"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "98634f0c-14b5-469b-ad6e-558fafe1237b",
+              "leftValue": "={{ $('Webhook').item.json.body.human_review_required }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        592,
+        0
+      ],
+      "id": "90db088a-bb85-4324-9f25-0ee1cb622b02",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "html": "<!DOCTYPE html>\n\n<html>\n<head>\n  <meta charset=\"UTF-8\" />\n  <title>My HTML document</title>\n</head>\n<body>\n  <div class=\"container\">\n    <h1>{{ $workflow.name }}</h1>\n    <p>{{ $json.output }}</p>\n  </div>\n</body>\n</html>\n\n<style>\n.container {\n  background-color: #ffffff;\n  text-align: center;\n  padding: 16px;\n  border-radius: 8px;\n}\n\nh1 {\n  color: #ff6d5a;\n  font-size: 24px;\n  font-weight: bold;\n  padding: 8px;\n}\n\nh2 {\n  color: #909399;\n  font-size: 18px;\n  font-weight: bold;\n  padding: 8px;\n}\n</style>\n\n<script>\nconsole.log(\"Hello World!\");\n</script>"
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        816,
+        96
+      ],
+      "id": "780e7f09-ae42-494a-883c-355f7f6513bf",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "etl-done",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        0
+      ],
+      "id": "665daede-c1a3-4842-8839-7037f3812e19",
+      "name": "Webhook",
+      "webhookId": "a0b0f147-6067-4144-852e-ff0a6c6e93f5"
+    },
+    {
+      "parameters": {
+        "fromEmail": "napat.sriwiroj@gmail.com",
+        "toEmail": "napat.sriwiroj@gmail.com",
+        "subject": "Data Quality Report Analysis for Airplane Crash",
+        "html": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        816,
+        -96
+      ],
+      "id": "036e4b91-67e9-4d74-ac80-c35e5323667b",
+      "name": "Send an Email",
+      "webhookId": "f42e8c1c-9548-4278-bcf3-50bd70ae7802",
+      "credentials": {
+        "smtp": {
+          "id": "fGEeDKY1qrHUvp6L",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Connect Gemini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "cf0302f2-62e0-4b9f-ac68-51db7a861027",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3d2dcceadbdd93b867ed8a85896496b6b665d27239361c7b9292f13d476c44e1"
+  },
+  "nodeGroups": [],
+  "id": "HuuTuLRPDRGfWiCO",
+  "tags": []
+}
